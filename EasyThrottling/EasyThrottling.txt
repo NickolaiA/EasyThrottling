@@ -1,0 +1,50 @@
+using System;
+using System.Diagnostics;
+using System.Threading;
+
+namespace AutodataRepairTimesAPI
+{
+    public class Throttle
+    {
+        private readonly object syncRoot = new object();
+        private readonly int limit;
+        private readonly TimeSpan duration;
+        private DateTime next = DateTime.MinValue;
+        private int currentItems;
+
+        public int CurrentItems
+        {
+            get { return currentItems; }
+        }
+
+        public Throttle(TimeSpan duration, int limit)
+        {
+            this.duration = duration;
+            this.limit = limit;
+        }
+
+        public void Wait()
+        {
+            lock (syncRoot)
+            {
+                DateTime now = DateTime.UtcNow;
+
+                if (next < now)
+                {
+                    currentItems = 1; next = now + duration;
+                }
+
+                ++currentItems;
+
+                if (currentItems <= limit)
+                {
+                    return;
+                }
+
+                Thread.Sleep(next - now);
+                next = DateTime.UtcNow + duration;
+                currentItems = 1;
+            }
+        }
+    }
+}
